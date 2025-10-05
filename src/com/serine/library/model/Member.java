@@ -42,6 +42,19 @@ public class Member {
         return borrowedBooks.stream().anyMatch(BorrowRecord::isOverdue);
     }
 
+    public String exportBorrowingHistory() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Borrowing History for ").append(name).append(" (ID: ").append(id).append(")\n");
+        for (BorrowRecord record : borrowedBooks) {
+            sb.append("Book: ").append(record.getBook().getTitle())
+            .append(" | Borrowed on: ").append(record.getBorrowDate())
+            .append(" | Due: ").append(record.getDueDate())
+            .append(record.isOverdue() ? " (OVERDUE)" : "")
+            .append("\n");
+        }
+        return sb.toString();
+    }
+
     @Override
     public String toString() {
         return String.format("Member{id=%d, name='%s', borrowed=%d}", id, name, borrowedBooks.size());

@@ -135,4 +135,11 @@ public boolean returnBook(int memberId, int bookId) {
                 .collect(Collectors.toList());
     }
 
+    public String exportMemberHistory(int memberId) {
+        return memberRepo.findById(memberId)
+               .map(Member::exportBorrowingHistory)
+               .orElse("Member not found.");
+    }
+
+
 }

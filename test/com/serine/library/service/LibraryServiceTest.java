@@ -181,4 +181,18 @@ public class LibraryServiceTest {
         assertEquals("Effective Java", unavailable.get(0).getTitle());
     }
 
+    @Test
+    void testExportBorrowingHistory() {
+        var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
+        Book b = service.addBook("Domain-Driven Design", "Eric Evans", 1);
+        Member m = service.registerMember("Alice", 3);
+
+        // Borrow the book
+        service.borrowBook(m.getId(), b.getId());
+
+        String history = service.exportMemberHistory(m.getId());
+        assertTrue(history.contains("Domain-Driven Design"));
+        assertTrue(history.contains("Alice"));
+}
+
 }
