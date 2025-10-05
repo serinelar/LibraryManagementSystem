@@ -6,17 +6,16 @@ import java.util.List;
 import java.util.Set;
 
 public class Member {
+    private static int counter = 1;
     private int id;
     private String name;
     private int borrowLimit = 3; // default; you can change for tiers
-    private Set<Integer> borrowedBookIds = new HashSet<>();
-    
-    public Member() {}
-    
+    private List<BorrowRecord> borrowedBooks = new ArrayList<>();
+        
     public Member(String name) {
+        this.id = counter++;
         this.name = name;
     }
-
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -24,34 +23,23 @@ public class Member {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
+    public List<BorrowRecord> getBorrowedBooks() { 
+        return borrowedBooks; 
+    }
+
     public int getBorrowLimit() { return borrowLimit; }
     public void setBorrowLimit(int borrowLimit) { this.borrowLimit = borrowLimit; }
 
-
-    public Set<Integer> getBorrowedBookIds() { return borrowedBookIds; }
-
-
-    // helper methods
-    public boolean canBorrowMore() { return borrowedBookIds.size() < borrowLimit; }
-    public void borrowBook(int bookId) { borrowedBookIds.add(bookId); }
-    public void returnBook(int bookId) { borrowedBookIds.remove(bookId); }
-
-    private List<Book> borrowedBooks = new ArrayList<>();
-
-    public List<Book> getBorrowedBooks() {
-            return borrowedBooks;
+    public void borrowBook(Book b, int borrowDays) {
+        borrowedBooks.add(new BorrowRecord(b, borrowDays));
     }
 
-    public void borrowBook(Book book) {
-        borrowedBooks.add(book);
-    }
-    
-    public void returnBook(Book book) {
-        borrowedBooks.remove(book);
+    public void returnBook(Book b) {
+        borrowedBooks.removeIf(record -> record.getBook().equals(b));
     }
 
     @Override
     public String toString() {
-        return String.format("Member{id=%d, name='%s', borrowed=%d}", id, name, borrowedBookIds.size());
+        return String.format("Member{id=%d, name='%s', borrowed=%d}", id, name, borrowedBooks.size());
     }
 }

@@ -37,42 +37,51 @@ public class LibraryService {
     
     // Borrow logic: check availability and member's limit
     public boolean borrowBook(int memberId, int bookId) {
-        Member m = memberRepo.findById(memberId).orElse(null);;
-        Book b = bookRepo.findById(bookId).orElse(null);;
+        Optional<Member> mOpt = memberRepo.findById(memberId);
+    Optional<Book> bOpt = bookRepo.findById(bookId);
 
-        if (m == null || b == null) return false;
-     
-        // Check borrow limit
-        if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) {
-            System.out.println("Member has reached borrowing limit.");
-            return false;
-        }
+    if (mOpt.isEmpty() || bOpt.isEmpty()) return false;
 
-        // Check availability
-        if (b.getAvailableCopies() <= 0) {
-            System.out.println("No copies available. Consider reserving.");
-            return false;
-        }
+    Member m = mOpt.get();
+    Book b = bOpt.get();
 
-        // Borrow
-        b.setAvailableCopies(b.getAvailableCopies() - 1);
-        m.borrowBook(b);
-        return true;
+    // Check borrow limit
+    if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) {
+        System.out.println("Member has reached borrowing limit.");
+        return false;
     }
-    
-    public boolean returnBook(int memberId, int bookId) {
-        Member m = memberRepo.findById(memberId).orElse(null);;
-        Book b = bookRepo.findById(bookId).orElse(null);;
-        
-        if (m == null || b == null) return false;
-        
-        if (!m.getBorrowedBooks().contains(b)) {
-            System.out.println("This member didn't borrow this book.");
-            return false;
-        }
-        
-        b.setAvailableCopies(b.getAvailableCopies() + 1);
-        m.returnBook(b);
-        return true;
+
+    // Check availability
+    if (b.getAvailableCopies() <= 0) {
+        System.out.println("No copies available. Consider reserving.");
+        return false;
     }
+
+    // Borrow (14-day loan by default)
+    b.setAvailableCopies(b.getAvailableCopies() - 1);
+    m.borrowBook(b, 14);
+    return true;
+}
+
+public boolean returnBook(int memberId, int bookId) {
+    Optional<Member> mOpt = memberRepo.findById(memberId);
+    Optional<Book> bOpt = bookRepo.findById(bookId);
+
+    if (mOpt.isEmpty() || bOpt.isEmpty()) return false;
+
+    Member m = mOpt.get();
+    Book b = bOpt.get();
+
+    boolean borrowed = m.getBorrowedBooks().stream()
+        .anyMatch(record -> record.getBook().equals(b));
+
+    if (!borrowed) {
+        System.out.println("This member didn't borrow this book.");
+        return false;
+    }
+
+    b.setAvailableCopies(b.getAvailableCopies() + 1);
+    m.returnBook(b);
+    return true;
+}
 }
