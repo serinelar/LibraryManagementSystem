@@ -32,6 +32,10 @@ public class Book {
     public int getAvailableCopies() { return availableCopies; }
     public void setAvailableCopies(int copies) { this.availableCopies = copies; }
 
+    public boolean isAvailable() {
+        return availableCopies > 0;
+    }
+
     // Reservations
     public Queue<Member> getReservationQueue() {
         return reservationQueue;

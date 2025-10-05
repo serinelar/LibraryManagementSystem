@@ -6,6 +6,7 @@ import com.serine.library.repository.MemberRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class LibraryService {
     private final BookRepository bookRepo;
@@ -114,6 +115,24 @@ public boolean returnBook(int memberId, int bookId) {
         // next.borrowBook(b, 14); b.setAvailable(false);
         }
         return true;    
+    }
+    
+    public List<Book> searchBooksByTitle(String title) {
+        return bookRepo.findAll().stream()
+                .filter(book -> book.getTitle().toLowerCase().contains(title.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    public List<Book> searchBooksByAuthor(String author) {
+        return bookRepo.findAll().stream()
+                .filter(book -> book.getAuthor().toLowerCase().contains(author.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    public List<Book> searchBooksByAvailability(boolean available) {
+        return bookRepo.findAll().stream()
+                .filter(book -> book.isAvailable() == available)
+                .collect(Collectors.toList());
     }
 
 }

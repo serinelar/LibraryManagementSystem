@@ -1,14 +1,12 @@
 package com.serine.library.service;
 
-import com.serine.library.model.Book;
-import com.serine.library.model.BorrowRecord;
-import com.serine.library.model.Member;
-import com.serine.library.repository.InMemoryBookRepository;
-import com.serine.library.repository.InMemoryMemberRepository;
+import com.serine.library.model.*;
+import com.serine.library.repository.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class LibraryServiceTest {
     @Test
@@ -122,4 +120,65 @@ public class LibraryServiceTest {
         
         assertTrue(m.hasOverdueBooks(), "Member should have overdue books");
     }
+
+    @Test
+    public void testSearchBooksByTitle() {
+        BookRepository bookRepo = new InMemoryBookRepository();
+        MemberRepository memberRepo = new InMemoryMemberRepository();
+        LibraryService library = new LibraryService(bookRepo, memberRepo);
+    
+        Book book1 = new Book("Effective Java", "Joshua Bloch", 2);
+        Book book2 = new Book("Clean Code", "Robert Martin", 1);
+        bookRepo.save(book1);
+        bookRepo.save(book2);
+
+        List<Book> results = library.searchBooksByTitle("effective");
+        assertEquals(1, results.size());
+        assertEquals("Effective Java", results.get(0).getTitle());
+    }
+    
+    @Test
+    public void testSearchBooksByAuthor() {
+        BookRepository bookRepo = new InMemoryBookRepository();
+        MemberRepository memberRepo = new InMemoryMemberRepository();
+        LibraryService library = new LibraryService(bookRepo, memberRepo);
+
+        Book book1 = new Book("Effective Java", "Joshua Bloch", 2);
+        Book book2 = new Book("Clean Code", "Robert Martin", 1);
+        bookRepo.save(book1);
+        bookRepo.save(book2);
+        
+        List<Book> results = library.searchBooksByAuthor("martin");
+        assertEquals(1, results.size());
+        assertEquals("Robert Martin", results.get(0).getAuthor());
+    }
+
+    @Test
+    public void testSearchBooksByAvailability() {
+        BookRepository bookRepo = new InMemoryBookRepository();
+        MemberRepository memberRepo = new InMemoryMemberRepository();
+        LibraryService library = new LibraryService(bookRepo, memberRepo);
+
+        Book book1 = new Book("Effective Java", "Joshua Bloch", 1);
+        Book book2 = new Book("Clean Code", "Robert Martin", 1);
+        bookRepo.save(book1);
+        bookRepo.save(book2);
+
+        // Borrow one book
+        Member member = new Member("Alice");
+        memberRepo.save(member);
+        library.borrowBook(member.getId(), book1.getId());
+
+
+        // check filters
+        List<Book> available = library.searchBooksByAvailability(true);
+        List<Book> unavailable = library.searchBooksByAvailability(false);
+
+        assertEquals(1, available.size());
+        assertEquals("Clean Code", available.get(0).getTitle());
+
+        assertEquals(1, unavailable.size());
+        assertEquals("Effective Java", unavailable.get(0).getTitle());
+    }
+
 }
