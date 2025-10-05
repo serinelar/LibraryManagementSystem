@@ -38,6 +38,10 @@ public class Member {
         borrowedBooks.removeIf(record -> record.getBook().equals(b));
     }
 
+    public boolean hasOverdueBooks() {
+        return borrowedBooks.stream().anyMatch(BorrowRecord::isOverdue);
+    }
+
     @Override
     public String toString() {
         return String.format("Member{id=%d, name='%s', borrowed=%d}", id, name, borrowedBooks.size());

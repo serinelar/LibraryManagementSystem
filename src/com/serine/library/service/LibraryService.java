@@ -94,8 +94,17 @@ public boolean returnBook(int memberId, int bookId) {
     Book b = bOpt.get();
     Member m = mOpt.get();
 
+    // find borrow record
+    boolean wasOverdue = m.getBorrowedBooks().stream()
+            .filter(record -> record.getBook().equals(b))
+            .anyMatch(BorrowRecord::isOverdue);
+
     m.returnBook(b);
     b.setAvailableCopies(b.getAvailableCopies() + 1);
+
+    if (wasOverdue) {
+        System.out.println("⚠️ Book was returned overdue by " + m.getName());
+    }
 
     // Notify next in line
     Member next = b.popNextReservation();

@@ -1,11 +1,14 @@
 package com.serine.library.service;
 
 import com.serine.library.model.Book;
+import com.serine.library.model.BorrowRecord;
 import com.serine.library.model.Member;
 import com.serine.library.repository.InMemoryBookRepository;
 import com.serine.library.repository.InMemoryMemberRepository;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.LocalDate;
 
 public class LibraryServiceTest {
     @Test
@@ -106,4 +109,17 @@ public class LibraryServiceTest {
         assertEquals(1, book.getAvailableCopies());
     }
 
+    @Test
+    void testOverdueBookDetection() {
+        LibraryService service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
+        Member m = service.registerMember("Alice", 3);
+        Book b = service.addBook("1984", "Orwell", 1);
+
+        // Simulate overdue borrow
+        LocalDate tenDaysAgo = LocalDate.now().minusDays(10);
+        BorrowRecord overdue = new BorrowRecord(b, tenDaysAgo, 5); // due 5 days ago
+        m.getBorrowedBooks().add(overdue);
+        
+        assertTrue(m.hasOverdueBooks(), "Member should have overdue books");
+    }
 }
