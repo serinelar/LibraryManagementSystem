@@ -1,6 +1,8 @@
 package com.serine.library.model;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Member {
@@ -34,6 +36,19 @@ public class Member {
     public void borrowBook(int bookId) { borrowedBookIds.add(bookId); }
     public void returnBook(int bookId) { borrowedBookIds.remove(bookId); }
 
+    private List<Book> borrowedBooks = new ArrayList<>();
+
+    public List<Book> getBorrowedBooks() {
+            return borrowedBooks;
+    }
+
+    public void borrowBook(Book book) {
+        borrowedBooks.add(book);
+    }
+    
+    public void returnBook(Book book) {
+        borrowedBooks.remove(book);
+    }
 
     @Override
     public String toString() {

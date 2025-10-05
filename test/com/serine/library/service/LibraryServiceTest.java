@@ -71,4 +71,20 @@ public class LibraryServiceTest {
         var results = service.searchBooks("Java");
         assertEquals(2, results.size(), "Should find 2 books containing 'Java'");
     }
+
+    @Test
+    void testBorrowLimit() {
+        var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
+        Book b1 = service.addBook("Book1", "A", 1);
+        Book b2 = service.addBook("Book2", "B", 1);
+        Book b3 = service.addBook("Book3", "C", 1);
+            Member m = service.registerMember("John", 2);
+
+    assertTrue(service.borrowBook(m.getId(), b1.getId()));
+    assertTrue(service.borrowBook(m.getId(), b2.getId()));
+
+    // This should fail because limit is 2
+    assertFalse(service.borrowBook(m.getId(), b3.getId()));
+}
+
 }

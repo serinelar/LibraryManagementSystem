@@ -37,43 +37,42 @@ public class LibraryService {
     
     // Borrow logic: check availability and member's limit
     public boolean borrowBook(int memberId, int bookId) {
-        Optional<Member> memberOpt = memberRepo.findById(memberId);
-        Optional<Book> bookOpt = bookRepo.findById(bookId);
-        
-        if (memberOpt.isEmpty() || bookOpt.isEmpty()) return false;
-        
-        Member member = memberOpt.get();
-        Book book = bookOpt.get();
-        
-        if (!member.canBorrowMore()) return false;
-        if (book.getAvailableCopies() <= 0) return false;
-        
-        // perform borrow
-        book.setAvailableCopies(book.getAvailableCopies() - 1);
-        member.borrowBook(bookId);
-        
-        bookRepo.save(book);
-        memberRepo.save(member);
+        Member m = memberRepo.findById(memberId).orElse(null);;
+        Book b = bookRepo.findById(bookId).orElse(null);;
+
+        if (m == null || b == null) return false;
+     
+        // Check borrow limit
+        if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) {
+            System.out.println("Member has reached borrowing limit.");
+            return false;
+        }
+
+        // Check availability
+        if (b.getAvailableCopies() <= 0) {
+            System.out.println("No copies available. Consider reserving.");
+            return false;
+        }
+
+        // Borrow
+        b.setAvailableCopies(b.getAvailableCopies() - 1);
+        m.borrowBook(b);
         return true;
     }
     
     public boolean returnBook(int memberId, int bookId) {
-        Optional<Member> memberOpt = memberRepo.findById(memberId);
-        Optional<Book> bookOpt = bookRepo.findById(bookId);
+        Member m = memberRepo.findById(memberId).orElse(null);;
+        Book b = bookRepo.findById(bookId).orElse(null);;
         
-        if (memberOpt.isEmpty() || bookOpt.isEmpty()) return false;
+        if (m == null || b == null) return false;
         
-        Member member = memberOpt.get();
-        Book book = bookOpt.get();
+        if (!m.getBorrowedBooks().contains(b)) {
+            System.out.println("This member didn't borrow this book.");
+            return false;
+        }
         
-        if (!member.getBorrowedBookIds().contains(bookId)) return false;
-        
-        book.setAvailableCopies(book.getAvailableCopies() + 1);
-        member.returnBook(bookId);
-        
-        bookRepo.save(book);
-        memberRepo.save(member);
-        
+        b.setAvailableCopies(b.getAvailableCopies() + 1);
+        m.returnBook(b);
         return true;
     }
 }
