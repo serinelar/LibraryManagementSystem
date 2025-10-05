@@ -1,18 +1,20 @@
 package com.serine.library.model;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class Book {
+    private static int counter = 1;
     private int id;
     private String title;
     private String author;
-    private int totalCopies;
-    private int availableCopies;
-    
-    public Book() {}
-    
+    private int availableCopies; // track copies
+    private Queue<Member> reservationQueue = new LinkedList<>();
+        
     public Book(String title, String author, int copies) {
+        this.id = counter++;
         this.title = title;
         this.author = author;
-        this.totalCopies = copies;
         this.availableCopies = copies;
     }
 
@@ -27,16 +29,27 @@ public class Book {
     public void setAuthor(String author) { this.author = author; }
 
 
-    public int getTotalCopies() { return totalCopies; }
-    public void setTotalCopies(int totalCopies) { this.totalCopies = totalCopies; }
-
-
     public int getAvailableCopies() { return availableCopies; }
-    public void setAvailableCopies(int availableCopies) { this.availableCopies = availableCopies; }
+    public void setAvailableCopies(int copies) { this.availableCopies = copies; }
+
+    // Reservations
+    public Queue<Member> getReservationQueue() {
+        return reservationQueue;
+    }
+
+    public void reserveBook(Member m) {
+        if (!reservationQueue.contains(m)) {
+            reservationQueue.add(m);
+        }
+    }
+
+    public Member popNextReservation() {
+        return reservationQueue.poll();
+    }
 
     @Override
     public String toString() {
         return String.format("Book{id=%d, title='%s', author='%s', available=%d/%d}",
-        id, title, author, availableCopies, totalCopies);
+        id, title, author, availableCopies, reservationQueue.size());
         }
     }

@@ -1,7 +1,6 @@
 package com.serine.library.service;
 
-import com.serine.library.model.Book;
-import com.serine.library.model.Member;
+import com.serine.library.model.*;
 import com.serine.library.repository.BookRepository;
 import com.serine.library.repository.MemberRepository;
 
@@ -38,50 +37,74 @@ public class LibraryService {
     // Borrow logic: check availability and member's limit
     public boolean borrowBook(int memberId, int bookId) {
         Optional<Member> mOpt = memberRepo.findById(memberId);
+        Optional<Book> bOpt = bookRepo.findById(bookId);
+        
+        if (mOpt.isEmpty() || bOpt.isEmpty()) return false;
+
+        Member m = mOpt.get();
+        Book b = bOpt.get();
+
+        // Check borrow limit
+        if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) {
+            System.out.println("Member has reached borrowing limit.");
+            return false;
+        }
+
+        // Check availability
+        if (b.getAvailableCopies() <= 0) {
+            System.out.println("No copies available. Consider reserving.");
+            return false;
+        }
+        
+        // Borrow (14-day loan by default)
+        b.setAvailableCopies(b.getAvailableCopies() - 1);
+        m.borrowBook(b, 14);
+        return true;
+}
+
+public void reserveBook(int bookId, int memberId) {
     Optional<Book> bOpt = bookRepo.findById(bookId);
+    Optional<Member> mOpt = memberRepo.findById(memberId);
 
-    if (mOpt.isEmpty() || bOpt.isEmpty()) return false;
+    if (bOpt.isEmpty() || mOpt.isEmpty()) {
+        System.out.println("Book or Member not found.");
+        return;
+    }
 
-    Member m = mOpt.get();
     Book b = bOpt.get();
+    Member m = mOpt.get();
 
-    // Check borrow limit
-    if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) {
-        System.out.println("Member has reached borrowing limit.");
-        return false;
+    if (b.getAvailableCopies() > 0) {
+        System.out.println("Book is available, no need to reserve. Just borrow it.");
+    } else {
+        b.reserveBook(m);
+        System.out.println(m.getName() + " reserved " + b.getTitle());
     }
-
-    // Check availability
-    if (b.getAvailableCopies() <= 0) {
-        System.out.println("No copies available. Consider reserving.");
-        return false;
-    }
-
-    // Borrow (14-day loan by default)
-    b.setAvailableCopies(b.getAvailableCopies() - 1);
-    m.borrowBook(b, 14);
-    return true;
 }
 
 public boolean returnBook(int memberId, int bookId) {
-    Optional<Member> mOpt = memberRepo.findById(memberId);
     Optional<Book> bOpt = bookRepo.findById(bookId);
+    Optional<Member> mOpt = memberRepo.findById(memberId);
 
-    if (mOpt.isEmpty() || bOpt.isEmpty()) return false;
-
-    Member m = mOpt.get();
-    Book b = bOpt.get();
-
-    boolean borrowed = m.getBorrowedBooks().stream()
-        .anyMatch(record -> record.getBook().equals(b));
-
-    if (!borrowed) {
-        System.out.println("This member didn't borrow this book.");
+    if (bOpt.isEmpty() || mOpt.isEmpty()) {
+        System.out.println("Book or Member not found.");
         return false;
     }
 
-    b.setAvailableCopies(b.getAvailableCopies() + 1);
+    Book b = bOpt.get();
+    Member m = mOpt.get();
+
     m.returnBook(b);
-    return true;
-}
+    b.setAvailableCopies(b.getAvailableCopies() + 1);
+
+    // Notify next in line
+    Member next = b.popNextReservation();
+    if (next != null) {
+        System.out.println("Book returned. Notifying " + next.getName() + " that " + b.getTitle() + " is available.");
+        // Optionally auto-borrow for them
+        // next.borrowBook(b, 14); b.setAvailable(false);
+        }
+        return true;    
+    }
+
 }

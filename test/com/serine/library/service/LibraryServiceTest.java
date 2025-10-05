@@ -84,7 +84,26 @@ public class LibraryServiceTest {
     assertTrue(service.borrowBook(m.getId(), b2.getId()));
 
     // This should fail because limit is 2
-    assertFalse(service.borrowBook(m.getId(), b3.getId()));
+    assertFalse(service.borrowBook(m.getId(), b3.getId())); 
 }
+    @Test
+    void testBookReservation() {
+        var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
+        Book book = service.addBook("Clean Code", "Robert C. Martin", 1);
+        Member m1 = service.registerMember("Alice", 3);
+        Member m2 = service.registerMember("Bob", 3);
+
+        // Alice borrows first
+        assertTrue(service.borrowBook(m1.getId(), book.getId()));
+
+        // Bob reserves since no copies left
+        service.reserveBook(book.getId(), m2.getId());
+        assertEquals(1, book.getReservationQueue().size());
+        assertTrue(book.getReservationQueue().contains(m2));
+
+        // Alice returns, Bob gets notified
+        assertTrue(service.returnBook(m1.getId(), book.getId()));
+        assertEquals(1, book.getAvailableCopies());
+    }
 
 }
