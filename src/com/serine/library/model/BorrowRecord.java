@@ -16,6 +16,7 @@ public class BorrowRecord {
         this.borrowDate = borrowDate;
         this.dueDate = borrowDate.plusDays(borrowDays);
     }
+    
 
     public Book getBook() { return book; }
     public LocalDate getBorrowDate() { return borrowDate; }

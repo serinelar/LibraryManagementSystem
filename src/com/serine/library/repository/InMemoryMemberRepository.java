@@ -2,19 +2,16 @@ package com.serine.library.repository;
 
 import com.serine.library.model.Member;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class InMemoryMemberRepository implements MemberRepository {
-    private final Map<Integer, Member> store = new HashMap<>();
-    private int nextId = 1;
+    private final Map<Integer, Member> store = new ConcurrentHashMap<>();
     
     @Override
-    public Member save(Member member) {
-        if (member.getId() == 0) {
-            member.setId(nextId++);
-        }
-        store.put(member.getId(), member);
-        return member;
+    public Member save(Member m) {
+        store.put(m.getId(), m);
+        return m;
     }
 
     @Override
@@ -24,5 +21,6 @@ public class InMemoryMemberRepository implements MemberRepository {
 
 
     @Override
-    public List<Member> findAll() { return new ArrayList<>(store.values()); }
+    public List<Member> findAll() { 
+        return new ArrayList<>(store.values()); }
 }

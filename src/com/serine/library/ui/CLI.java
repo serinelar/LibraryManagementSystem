@@ -2,6 +2,7 @@ package com.serine.library.ui;
 
 import com.serine.library.model.Book;
 import com.serine.library.model.Member;
+import com.serine.library.model.MembershipType;
 import com.serine.library.service.LibraryService;
 import com.serine.library.repository.BookRepository;
 import com.serine.library.repository.MemberRepository;
@@ -79,10 +80,11 @@ public class CLI {
     private void registerMember() {
         System.out.print("Member name: ");
         String name = scanner.nextLine().trim();
-        System.out.print("Borrow limit (enter for default 3): ");
-        String limitInput = scanner.nextLine().trim();
-        int limit = limitInput.isEmpty() ? 3 : Integer.parseInt(limitInput);
-        Member m = service.registerMember(name, limit);
+        System.out.print("Membership type (REGULAR/PREMIUM): ");
+        String typeInput = scanner.nextLine().trim().toUpperCase();
+        MembershipType type = typeInput.equals("PREMIUM") ? MembershipType.PREMIUM : MembershipType.REGULAR;
+
+        Member m = service.registerMember(name, type);
         System.out.println("Registered: " + m);
     }
 

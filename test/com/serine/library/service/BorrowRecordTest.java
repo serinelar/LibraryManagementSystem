@@ -1,7 +1,7 @@
 package com.serine.library.service;
 
-import com.serine.library.model.Book;
-import com.serine.library.model.Member;
+import com.serine.library.model.*;
+import com.serine.library.repository.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,13 +9,10 @@ public class BorrowRecordTest {
     @Test
     void testBorrowAndReturnBook() {
         // Setup
-        var service = new LibraryService(
-            new com.serine.library.repository.InMemoryBookRepository(),
-            new com.serine.library.repository.InMemoryMemberRepository()
-        );
+        var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
 
         Book b = service.addBook("Clean Code", "Robert C. Martin", 1);
-        Member m = service.registerMember("Alice", 3);
+        Member m = service.registerMember("Alice", MembershipType.REGULAR);
 
         // Borrow book
         boolean borrowed = service.borrowBook(m.getId(), b.getId());

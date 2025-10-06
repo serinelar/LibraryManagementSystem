@@ -1,34 +1,44 @@
 package com.serine.library.model;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
+import java.util.Objects;
 public class Member {
     private static int counter = 1;
     private int id;
     private String name;
-    private int borrowLimit = 3; // default; you can change for tiers
-    private List<BorrowRecord> borrowedBooks = new ArrayList<>();
+    private MembershipType type;
+    private int borrowLimit;
+    private final List<BorrowRecord> borrowedBooks = new ArrayList<>();
         
+    // Default constructor: REGULAR
     public Member(String name) {
         this.id = counter++;
         this.name = name;
+        this.type = MembershipType.REGULAR;
+        this.borrowLimit = 3;
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
-    
+    // Constructor with explicit type
+    public Member(String name, MembershipType type) {
+        this.id = counter++;
+        this.name = name;
+        this.type = type;
+        // reasonable defaults: PREMIUM larger than REGULAR
+        this.borrowLimit = (type == MembershipType.PREMIUM) ? 10 : 5;
+    }
+
+    public int getId() { return id; }    
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public MembershipType getType() { return type; }
+    public int getBorrowLimit() { return borrowLimit; }
+    public void setBorrowLimit(int borrowLimit) { this.borrowLimit = borrowLimit; }
 
     public List<BorrowRecord> getBorrowedBooks() { 
         return borrowedBooks; 
     }
-
-    public int getBorrowLimit() { return borrowLimit; }
-    public void setBorrowLimit(int borrowLimit) { this.borrowLimit = borrowLimit; }
 
     public void borrowBook(Book b, int borrowDays) {
         borrowedBooks.add(new BorrowRecord(b, borrowDays));
@@ -58,5 +68,18 @@ public class Member {
     @Override
     public String toString() {
         return String.format("Member{id=%d, name='%s', borrowed=%d}", id, name, borrowedBooks.size());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Member)) return false;
+        Member member = (Member) o;
+        return id == member.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

@@ -19,16 +19,16 @@ public class LibraryServiceTest {
     @Test
     void testRegisterMember() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
-        Member m = service.registerMember("Alice", 5);
+        Member m = service.registerMember("Alice", MembershipType.PREMIUM);
         assertEquals("Alice", m.getName());
-        assertEquals(5, m.getBorrowLimit());
+        assertEquals(10, m.getBorrowLimit()); // premium default
     }
 
     @Test
     void testBorrowBookSuccess() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
         Book b = service.addBook("Clean Code", "Robert C. Martin", 2);
-        Member m = service.registerMember("Bob", 3);
+        Member m = service.registerMember("Bob", MembershipType.REGULAR);
 
         boolean borrowed = service.borrowBook(m.getId(), b.getId());
         assertTrue(borrowed, "Borrow should succeed");
@@ -39,8 +39,8 @@ public class LibraryServiceTest {
     void testBorrowBookFailWhenNoCopies() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
         Book b = service.addBook("Algorithms", "Cormen", 1);
-        Member m1 = service.registerMember("Alice", 3);
-        Member m2 = service.registerMember("Bob", 3);
+        Member m1 = service.registerMember("Alice", MembershipType.REGULAR);
+        Member m2 = service.registerMember("Bob", MembershipType.REGULAR);
 
         // Alice borrows first
         assertTrue(service.borrowBook(m1.getId(), b.getId()));
@@ -54,7 +54,7 @@ public class LibraryServiceTest {
     void testReturnBook() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
         Book b = service.addBook("Refactoring", "Martin Fowler", 1);
-        Member m = service.registerMember("Charlie", 2);
+        Member m = service.registerMember("Charlie", MembershipType.REGULAR);
 
         service.borrowBook(m.getId(), b.getId());
         boolean returned = service.returnBook(m.getId(), b.getId());
@@ -79,20 +79,21 @@ public class LibraryServiceTest {
         Book b1 = service.addBook("Book1", "A", 1);
         Book b2 = service.addBook("Book2", "B", 1);
         Book b3 = service.addBook("Book3", "C", 1);
-            Member m = service.registerMember("John", 2);
+            Member m = service.registerMember("John", MembershipType.REGULAR);
 
     assertTrue(service.borrowBook(m.getId(), b1.getId()));
     assertTrue(service.borrowBook(m.getId(), b2.getId()));
 
-    // This should fail because limit is 2
+    // This should fail because regular limit = 5, so force test by limiting to 2 manually
+    m.setBorrowLimit(2);
     assertFalse(service.borrowBook(m.getId(), b3.getId())); 
 }
     @Test
     void testBookReservation() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
         Book book = service.addBook("Clean Code", "Robert C. Martin", 1);
-        Member m1 = service.registerMember("Alice", 3);
-        Member m2 = service.registerMember("Bob", 3);
+        Member m1 = service.registerMember("Alice", MembershipType.REGULAR);
+        Member m2 = service.registerMember("Bob", MembershipType.REGULAR);
 
         // Alice borrows first
         assertTrue(service.borrowBook(m1.getId(), book.getId()));
@@ -110,12 +111,12 @@ public class LibraryServiceTest {
     @Test
     void testOverdueBookDetection() {
         LibraryService service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
-        Member m = service.registerMember("Alice", 3);
+        Member m = service.registerMember("Alice", MembershipType.REGULAR);
         Book b = service.addBook("1984", "Orwell", 1);
 
         // Simulate overdue borrow
         LocalDate tenDaysAgo = LocalDate.now().minusDays(10);
-        BorrowRecord overdue = new BorrowRecord(b, tenDaysAgo, 5); // due 5 days ago
+        BorrowRecord overdue = new BorrowRecord(b,tenDaysAgo, 5); // due 5 days ago
         m.getBorrowedBooks().add(overdue);
         
         assertTrue(m.hasOverdueBooks(), "Member should have overdue books");
@@ -165,8 +166,7 @@ public class LibraryServiceTest {
         bookRepo.save(book2);
 
         // Borrow one book
-        Member member = new Member("Alice");
-        memberRepo.save(member);
+        Member member = library.registerMember("Alice", MembershipType.REGULAR);
         library.borrowBook(member.getId(), book1.getId());
 
 
@@ -185,7 +185,7 @@ public class LibraryServiceTest {
     void testExportBorrowingHistory() {
         var service = new LibraryService(new InMemoryBookRepository(), new InMemoryMemberRepository());
         Book b = service.addBook("Domain-Driven Design", "Eric Evans", 1);
-        Member m = service.registerMember("Alice", 3);
+        Member m = service.registerMember("Alice", MembershipType.REGULAR);
 
         // Borrow the book
         service.borrowBook(m.getId(), b.getId());
@@ -194,5 +194,33 @@ public class LibraryServiceTest {
         assertTrue(history.contains("Domain-Driven Design"));
         assertTrue(history.contains("Alice"));
 }
+
+    @Test
+    void testGetRecommendationsForMember() {
+        LibraryService libraryService = new LibraryService();
+
+        // Add books
+        Book b1 = libraryService.addBook("The Hobbit", "J.R.R. Tolkien", "Fantasy");
+        Book b2 = libraryService.addBook("The Lord of the Rings", "J.R.R. Tolkien", "Fantasy");
+        Book b3 = libraryService.addBook("1984", "George Orwell", "Dystopian");
+        Book b4 = libraryService.addBook("Animal Farm", "George Orwell", "Dystopian");
+        Book b5 = libraryService.addBook("Clean Code", "Robert C. Martin", "Programming");
+
+        // Add members
+        Member m1 = libraryService.registerMember("Alice", MembershipType.PREMIUM);
+        Member m2 = libraryService.registerMember("Bob", MembershipType.REGULAR);
+
+        // Borrow history
+        libraryService.borrowBook(m1.getId(), b1.getId()); // Alice likes fantasy
+        libraryService.borrowBook(m2.getId(), b3.getId()); // Bob likes dystopian
+        libraryService.borrowBook(m2.getId(), b4.getId());
+
+        // Alice should get b2 (same author/genre) ranked higher than others
+        List<Book> recommendations = libraryService.recommendBooks(m1.getId());
+
+        assertFalse(recommendations.isEmpty());
+        assertEquals("The Lord of the Rings", recommendations.get(0).getTitle());
+}
+   
 
 }

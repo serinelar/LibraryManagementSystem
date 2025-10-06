@@ -1,5 +1,6 @@
 package com.serine.library;
 
+import com.serine.library.model.MembershipType;
 import com.serine.library.repository.*;
 import com.serine.library.service.LibraryService;
 import com.serine.library.ui.CLI;
@@ -15,7 +16,7 @@ public class Main {
         // Optional: seed some data for quick testing
         service.addBook("Clean Code", "Robert C. Martin", 2);
         service.addBook("Introduction to Algorithms", "Cormen et al.", 1);
-        service.registerMember("Alice", 3);
+        service.registerMember("Alice", MembershipType.REGULAR);
         
         cli.start();
     }
