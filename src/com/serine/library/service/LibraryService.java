@@ -4,13 +4,13 @@ import com.serine.library.model.*;
 import com.serine.library.repository.*;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import javax.swing.JOptionPane;
 
 public class LibraryService {
     private final BookRepository bookRepo;
@@ -43,7 +43,15 @@ public class LibraryService {
         return memberRepo.save(m);
     }
     
-    
+    // Delete a book by ID
+    public void deleteBook(int id) {
+        bookRepo.delete(id);
+    }
+    // Delete a member by ID
+    public void deleteMember(int id) {
+        memberRepo.delete(id);
+    }
+  
     public List<Book> listAllBooks() { return bookRepo.findAll(); }
     public List<Member> listAllMembers() { return memberRepo.findAll(); }
     
@@ -59,35 +67,49 @@ public class LibraryService {
         Member m = mOpt.get();
         Book b = bOpt.get();
 
-        // Check borrow limit
+        // Already borrowed?
+        if (m.getBorrowedBooks().stream().anyMatch(r -> r.getBook().getId() == bookId))
+            return false;
+
+        // Limit & availability
         if (m.getBorrowedBooks().size() >= m.getBorrowLimit()) return false;
         if (!b.isAvailable()) return false;
         
         // Borrow (14-day loan by default)
         b.setAvailableCopies(b.getAvailableCopies() - 1);
         m.borrowBook(b, 14);
+        bookRepo.save(b);
+        memberRepo.save(m);
         return true;
 }
 
-public void reserveBook(int bookId, int memberId) {
+public String reserveBook(int bookId, int memberId) {
     Optional<Book> bOpt = bookRepo.findById(bookId);
     Optional<Member> mOpt = memberRepo.findById(memberId);
 
     if (bOpt.isEmpty() || mOpt.isEmpty()) {
-        System.out.println("Book or Member not found.");
-        return;
+        return "Book or Member not found.";
     }
 
     Book b = bOpt.get();
     Member m = mOpt.get();
 
     if (b.getAvailableCopies() > 0) {
-        System.out.println("Book is available, no need to reserve. Just borrow it.");
-    } else {
-        b.reserveBook(m);
-        System.out.println(m.getName() + " reserved " + b.getTitle());
+        return "Book is available, no need to reserve. Just borrow it.";
     }
+
+    // Prevent duplicate reservation by the same member
+    var queue = b.getReservationQueue();
+        if (queue.stream().anyMatch(r -> r.getId() == m.getId()))
+            return "You have already reserved this book.";
+
+    // Reserve the book
+    b.reserveBook(m);
+    bookRepo.save(b);
+    int position = b.getReservationQueue().size();
+    return "Reservation successful. Your position in the queue is #" + position + ".";
 }
+
 
 public boolean returnBook(int memberId, int bookId) {
     Optional<Book> bOpt = bookRepo.findById(bookId);
@@ -98,26 +120,52 @@ public boolean returnBook(int memberId, int bookId) {
     Book b = bOpt.get();
     Member m = mOpt.get();
 
-    // find borrow record
-    boolean wasOverdue = m.getBorrowedBooks().stream()
-            .filter(record -> record.getBook().equals(b))
-            .anyMatch(BorrowRecord::isOverdue);
+    // Check if this member actually borrowed this book
+    Optional<BorrowRecord> recordOpt = m.getBorrowedBooks().stream()
+            .filter(record -> record.getBook().getId() == bookId)
+            .findFirst();
 
+    if (recordOpt.isEmpty()) {
+        // Member never borrowed that specific book -> cannot return
+        return false;
+    }
+
+    boolean wasOverdue = recordOpt.map(BorrowRecord::isOverdue).orElse(false);
+
+    // Remove borrow record, increment availability and persist
     m.returnBook(b);
-    b.setAvailableCopies(b.getAvailableCopies() + 1);
+    memberRepo.save(m);
+
+    // Handle reservation queue
+    if (!b.getReservationQueue().isEmpty()) {
+        Member next = b.popNextReservation();
+
+    // Auto-borrow logic for next in queue
+    if (next.getBorrowedBooks().size() < next.getBorrowLimit()) {
+        next.borrowBook(b, 14); // 14-day auto loan
+        memberRepo.save(next);
+        JOptionPane.showMessageDialog(null,
+                "Book returned: " + b.getTitle() + "\n" +
+                "Automatically borrowed by next reserver: " + next.getName(),
+          "Auto Borrow Notification", JOptionPane.INFORMATION_MESSAGE);
+    } else {
+        // If the next reserver reached limit → skip borrowing but keep reservation
+        JOptionPane.showMessageDialog(null,
+                next.getName() + " reached their borrow limit.\n"
+                + "Book availability held until they free a slot.",
+          "Reservation Pending", JOptionPane.WARNING_MESSAGE);
+        }
+    } else {
+        b.setAvailableCopies(b.getAvailableCopies() + 1);
+    }
+
+    bookRepo.save(b);
 
     if (wasOverdue) {
         System.out.println("Book was returned overdue by " + m.getName());
     }
 
-    // Notify next in line
-    Member next = b.popNextReservation();
-    if (next != null) {
-        System.out.println("Book returned. Notifying " + next.getName() + " that " + b.getTitle() + " is available.");
-        // Optionally auto-borrow for them
-        // next.borrowBook(b, 14); b.setAvailable(false);
-        }
-        return true;    
+    return true;    
     }
     
     public List<Book> searchBooksByTitle(String title) {
@@ -150,40 +198,31 @@ public boolean returnBook(int memberId, int bookId) {
         if (mOpt.isEmpty()) return Collections.emptyList();
 
         Member member = mOpt.get();
-        Set<Book> borrowedBooks = member.getBorrowedBooks().stream()
-                .map(BorrowRecord::getBook)
-                .collect(Collectors.toSet());
 
-        // 1. Collect genres borrowed by this member
-        Set<String> preferredGenres = borrowedBooks.stream()
-                .map(Book::getGenre)
+        // Genres the member already borrowed
+        Set<String> borrowedGenres = member.getBorrowedBooks().stream()
+                .map(r -> r.getBook().getGenre())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // 2. Candidate books: available + not borrowed yet
-        List<Book> candidateBooks = bookRepo.findAll().stream()
-                .filter(Book::isAvailable)
-                .filter(b -> !borrowedBooks.contains(b))
+
+        // Books the member already borrowed (to exclude them)
+        Set<Integer> borrowedBookIds = member.getBorrowedBooks().stream()
+                .map(r -> r.getBook().getId())
+                .collect(Collectors.toSet());
+
+        // Candidate books: available and not already borrowed
+        List<Book> allBooks = bookRepo.findAll();
+        return allBooks.stream()
+                .filter(b -> b.getAvailableCopies() > 0)
+                .filter(b -> !borrowedBookIds.contains(b.getId()))
+                .sorted((a, b) -> {
+                    boolean aFav = borrowedGenres.contains(a.getGenre());
+                    boolean bFav = borrowedGenres.contains(b.getGenre());
+                    // prefer same-genre
+                    return Boolean.compare(bFav, aFav);
+                })
+                .limit(10)
                 .collect(Collectors.toList());
-
-        // 3. Hybrid scoring
-        Map<Book, Double> scores = new HashMap<>();
-        for (Book book : candidateBooks) {
-            double score = 0.0;
-            if (preferredGenres.contains(book.getGenre())) score += 1.0;
-
-            long popularity = memberRepo.findAll().stream()
-                    .filter(m -> m.getBorrowedBooks().stream()
-                            .anyMatch(r -> r.getBook().equals(book)))
-                    .count();
-            score += popularity * 0.5;
-
-            scores.put(book, score);
         }
-
-        return scores.entrySet().stream()
-                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
 }

@@ -23,4 +23,7 @@ public class InMemoryMemberRepository implements MemberRepository {
     @Override
     public List<Member> findAll() { 
         return new ArrayList<>(store.values()); }
+
+    @Override
+    public void delete(int id) { store.remove(id); }    
 }

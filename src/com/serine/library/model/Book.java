@@ -66,9 +66,14 @@ public class Book {
 
     @Override
     public String toString() {
-        return String.format("Book{id=%d, title='%s', author='%s', available=%d/%d}",
-        id, title, author, genre, availableCopies, totalCopies);    
-    }
+        return String.format("%d - %s (%s) [%s] - avail: %d",
+               id,
+               title != null ? title : "Unknown Title",
+               author != null ? author : "Unknown Author",
+               genre != null ? genre : "Unknown Genre",
+               availableCopies);
+}
+
 
     @Override
     public boolean equals(Object o) {

@@ -4,8 +4,6 @@ import com.serine.library.model.Book;
 import com.serine.library.model.Member;
 import com.serine.library.model.MembershipType;
 import com.serine.library.service.LibraryService;
-import com.serine.library.repository.BookRepository;
-import com.serine.library.repository.MemberRepository;
 
 import java.util.List;
 import java.util.Scanner;
